@@ -61,6 +61,7 @@ def edit_df_data(df, tickers):
     df['return rate'] = df[rr_cols].mean(axis=1)
 
     df = df.sort_values(by='return rate',ascending=False).reset_index(drop=True)
+    df['rank'] = df.index + 1
 
     df['name'] = np.where(
         df.index == 0, '🥇 ' + df['name'], np.where(
@@ -74,23 +75,29 @@ def edit_df_data(df, tickers):
 df_data, df_tickers = load_data()
 df_main = edit_df_data(df_data,df_tickers)
 
+sp500 = get_price_change('SPY') * 100
+st.subheader(f'Benchmark SP500: {sp500:.1f}%')
+
+
 st.dataframe(
     df_main,
     column_order=(
-       'name',
-       'pl',
-       'pl_rr',
-       'usa',
-       'usa_rr',
-       'world',
-       'world_rr',
-       'crypto',
-       'crypto_rr',
-       'commodity',
-       'commodity_rr',
-       'return rate'
-       ),
+        'rank',
+        'name',
+        'pl',
+        'pl_rr',
+        'usa',
+        'usa_rr',
+        'world',
+        'world_rr',
+        'crypto',
+        'crypto_rr',
+        'commodity',
+        'commodity_rr',
+        'return rate'
+        ),
     column_config={
+        'rank': st.column_config.NumberColumn('Rank'),
         'name': st.column_config.TextColumn('User'),
         'pl_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
         'usa_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
@@ -104,8 +111,8 @@ st.dataframe(
         'commodity': st.column_config.TextColumn('Surowiec'),
         'return rate': st.column_config.NumberColumn('Stopa zwrotu', format='%.1f %%')
     },
-    width='stretch',
-    hide_index=True
+    width='content',
+    hide_index=True,
     )
 
 
