@@ -3,6 +3,12 @@ import streamlit as st
 import numpy as np
 import yfinance as yf
 
+st.set_page_config(page_title="Portfel Inwestycyjny", layout="wide")
+
+st.title("📊 Mój Portfel Inwestycyjny")
+
+@st.cache_data(ttl=3600)
+
 def load_data():
     df_data = pd.read_excel("data.xlsx",sheet_name="stocks")
     df_tickers = pd.read_excel("data.xlsx",sheet_name="tickers")
@@ -53,3 +59,5 @@ def edit_df_data(df, tickers):
 
 df_data, df_tickers = load_data()
 df_main = edit_df_data(df_data,df_tickers)
+
+st.dataframe(df_main)
