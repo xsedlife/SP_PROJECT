@@ -5,7 +5,7 @@ import yfinance as yf
 
 st.set_page_config(page_title="Portfel Inwestycyjny", layout="wide")
 
-st.title("📊 Mój Portfel Inwestycyjny")
+st.title("📊 Ranking inwestycyjny")
 
 @st.cache_data(ttl=3600)
 
@@ -30,6 +30,13 @@ def get_price_change(ticker):
     return return_rate
 
 def edit_df_data(df, tickers):
+    robot_users = ['Claude Sonnet', 'Google Gemini', 'Chat GPT']
+    df['name'] = np.where(
+        df['name'].isin(robot_users),
+        df['name'] + ' 👾',
+        df['name']
+    )
+
     rr_cols = []
     unique_tickers = tickers['ticker'].unique()
     price_cache = {}
@@ -46,12 +53,19 @@ def edit_df_data(df, tickers):
     for c in columns:
         new_name = c + '_rr'
         rr_cols.append(new_name)
-        df[new_name] = df[c].map(price_cache)
+        df[new_name] = df[c].map(price_cache) * 100
 
     mapping_dict = tickers.set_index('ticker')['t_name'].to_dict()
     df[columns] = df[columns].replace(mapping_dict)
 
     df['return rate'] = df[rr_cols].mean(axis=1)
+
+    df = df.sort_values(by='return rate',ascending=False).reset_index(drop=True)
+
+    df['name'] = np.where(
+        df.index == 0, '🥇 ' + df['name'], np.where(
+            df.index == 1, '🥈 ' + df['name'], np.where(
+               df.index == 2, '🥉' + df['name'], df['name'])))
 
 
     return df
@@ -60,4 +74,38 @@ def edit_df_data(df, tickers):
 df_data, df_tickers = load_data()
 df_main = edit_df_data(df_data,df_tickers)
 
-st.dataframe(df_main)
+st.dataframe(
+    df_main,
+    column_order=(
+       'name',
+       'pl',
+       'pl_rr',
+       'usa',
+       'usa_rr',
+       'world',
+       'world_rr',
+       'crypto',
+       'crypto_rr',
+       'commodity',
+       'commodity_rr',
+       'return rate'
+       ),
+    column_config={
+        'name': st.column_config.TextColumn('User'),
+        'pl_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+        'usa_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+        'world_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+        'crypto_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+        'commodity_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+        'pl': st.column_config.TextColumn('Polska'),
+        'usa': st.column_config.TextColumn('USA'),
+        'world': st.column_config.TextColumn('Świat'),
+        'crypto': st.column_config.TextColumn('Krypto'),
+        'commodity': st.column_config.TextColumn('Surowiec'),
+        'return rate': st.column_config.NumberColumn('Stopa zwrotu', format='%.1f %%')
+    },
+    width='stretch',
+    hide_index=True
+    )
+
+
