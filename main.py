@@ -71,16 +71,32 @@ def edit_df_data(df, tickers):
 
     return df
 
+def heat_map(val, benchmark):
+    if val > 0 and val > benchmark:
+        return 'background-color: #006B07; color: white' 
+    elif 0 <= val <= benchmark:
+        return 'background-color: #737100; color: white' 
+    elif val < 0:
+        return 'background-color: #801E00; color: white' 
+    return ''
 
+
+############################################### <- kod
 df_data, df_tickers = load_data()
 df_main = edit_df_data(df_data,df_tickers)
-
 sp500 = get_price_change('SPY') * 100
+cols_to_style = [col for col in df_main.columns if col.endswith('_rr')] + ['return rate']
+styled_df_main = df_main.style.map(
+    heat_map,
+    benchmark = sp500,
+    subset = cols_to_style
+)
+############################################### <- Streamlit
 st.subheader(f'Benchmark SP500: {sp500:.1f}%')
 
 
 st.dataframe(
-    df_main,
+    styled_df_main,
     column_order=(
         'rank',
         'name',
@@ -111,8 +127,17 @@ st.dataframe(
         'commodity': st.column_config.TextColumn('Surowiec'),
         'return rate': st.column_config.NumberColumn('Stopa zwrotu', format='%.1f %%')
     },
-    width='content',
+    width='stretch',
     hide_index=True,
     )
 
+wygraniec, frajer = st.columns(2)
+with wygraniec:
+    st.markdown(f"<h3 style='text-align: center;'>KOKS TYGODNIA:<br>{df_main['name'].iloc[0]}</h3>", unsafe_allow_html=True)
 
+    st.image("gifs/jasperkasiorka-dawid-jasper.gif", use_container_width=True)
+
+with frajer:
+    st.markdown(f"<h3 style='text-align: center;'>FRAJER TYGODNIA:<br>{'🫵🏼🤣 ' + df_main['name'].iloc[-1]}</h3>", unsafe_allow_html=True)
+
+    st.image("gifs/dawid.gif", use_container_width=True)
