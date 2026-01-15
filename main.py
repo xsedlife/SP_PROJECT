@@ -38,6 +38,7 @@ def edit_df_data(df, tickers):
     )
 
     rr_cols = []
+    rr_spolki = []
     unique_tickers = tickers['ticker'].unique()
     price_cache = {}
     for ticker in unique_tickers:
@@ -53,12 +54,16 @@ def edit_df_data(df, tickers):
     for c in columns:
         new_name = c + '_rr'
         rr_cols.append(new_name)
+        if c in ['pl','usa','world']:
+            rr_spolki.append(new_name)
         df[new_name] = df[c].map(price_cache) * 100
 
     mapping_dict = tickers.set_index('ticker')['t_name'].to_dict()
     df[columns] = df[columns].replace(mapping_dict)
 
     df['return rate'] = df[rr_cols].mean(axis=1)
+    
+    df['spolki_rr'] = df[rr_spolki].mean(axis=1)
 
     df = df.sort_values(by='return rate',ascending=False).reset_index(drop=True)
     df['rank'] = df.index + 1
@@ -110,6 +115,7 @@ st.dataframe(
         'crypto_rr',
         'commodity',
         'commodity_rr',
+        'spolki_rr',
         'return rate'
         ),
     column_config={
@@ -125,6 +131,7 @@ st.dataframe(
         'world': st.column_config.TextColumn('Świat'),
         'crypto': st.column_config.TextColumn('Krypto'),
         'commodity': st.column_config.TextColumn('Surowiec'),
+        'spolki_rr': st.column_config.NumberColumn('Zwrot (spółki)', format='%.1f %%'),
         'return rate': st.column_config.NumberColumn('Stopa zwrotu', format='%.1f %%')
     },
     width='stretch',
