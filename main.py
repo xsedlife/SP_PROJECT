@@ -24,7 +24,11 @@ def get_price_change(ticker, date=None):
     last_price = hist['Close'].iloc[-1] 
     
     if date == 'rok do roku':
-        price = hist['Close'].iloc[0] 
+        price = hist['Close'].iloc[0]
+    elif date == 'week':
+        price = hist['Close'].iloc[-5]
+    elif date == 'week-krypto':
+        price = hist['Close'].iloc[-7]
     else:
         price = hist.loc[hist.index.year == 2025]['Close'].iloc[-1]
         
@@ -50,6 +54,11 @@ def edit_df_data(df, tickers, date=None):
             price_cache[ticker] = get_price_change(ticker)
         elif date == 'rok do roku':
             price_cache[ticker] = get_price_change(ticker, date=date)
+        elif date == 'week':
+            if ticker[-4:] == ('-USD'):
+                price_cache[ticker] = get_price_change(ticker, date='week-krypto')
+            else:
+                price_cache[ticker] = get_price_change(ticker, date=date)
 
     columns = [
         'pl',
@@ -97,9 +106,11 @@ def heat_map(val, benchmark):
 df_data, df_tickers = load_data()
 df_main = edit_df_data(df_data,df_tickers)
 df_rok_do_roku = edit_df_data(df_data,df_tickers, date='rok do roku')
+df_tydzien = edit_df_data(df_data,df_tickers, date='week')
 
 sp500 = get_price_change('SPY') * 100
 sp500_rok_do_roku = get_price_change('SPY',date = 'rok do roku') * 100
+sp_500_tydzien = get_price_change('SPY',date = 'week') * 100
 
 cols_to_style = [col for col in df_main.columns if col.endswith('_rr')] + ['return rate']
 
@@ -111,7 +122,12 @@ styled_df_main = df_main.style.map(
 )
 styled_df_rok_do_roku = df_rok_do_roku.style.map(
     heat_map,
-    benchmark = sp500,
+    benchmark = sp500_rok_do_roku,
+    subset = cols_to_style
+)
+styled_df_tydzien = df_tydzien.style.map(
+    heat_map,
+    benchmark = sp_500_tydzien,
     subset = cols_to_style
 )
 
@@ -119,7 +135,7 @@ styled_df_rok_do_roku = df_rok_do_roku.style.map(
 ############################################### <- Streamlit
 widok = st.segmented_control(
     'Porównanie:',
-    options=['Początek roku','Rok do roku'],
+    options=['Początek roku','7 dni','Rok do roku'],
     default='Początek roku'
 )
 
@@ -165,15 +181,15 @@ if widok == 'Początek roku':
 
     wygraniec, frajer = st.columns(2)
     with wygraniec:
-        st.markdown(f"<h3 style='text-align: center;'>KOKS TYGODNIA:<br>{df_main['name'].iloc[0]}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align: center;'>KOKS ROKU:<br>{df_main['name'].iloc[0]}</h3>", unsafe_allow_html=True)
 
         st.image("gifs/jasperkasiorka-dawid-jasper.gif", width='stretch')
 
     with frajer:
-        st.markdown(f"<h3 style='text-align: center;'>FRAJER TYGODNIA:<br>{'🫵🏼🤣 ' + df_main['name'].iloc[-1]}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align: center;'>FRAJER ROKU:<br>{'🫵🏼🤣 ' + df_main['name'].iloc[-1]}</h3>", unsafe_allow_html=True)
 
         st.image("gifs/dawid.gif", width='stretch')
-else:
+elif widok == 'Rok do roku':
     st.subheader(f'Benchmark SP500: {sp500_rok_do_roku:.1f}%')
     st.dataframe(
         styled_df_rok_do_roku,
@@ -221,5 +237,56 @@ else:
 
     with frajer:
         st.markdown(f"<h3 style='text-align: center;'>FRAJER ROKU:<br>{'🫵🏼🤣 ' + df_rok_do_roku['name'].iloc[-1]}</h3>", unsafe_allow_html=True)
+
+        st.image("gifs/dawid.gif", width='stretch')
+
+elif widok == '7 dni':
+    st.subheader(f'Benchmark SP500: {sp_500_tydzien:.1f}%')
+    st.dataframe(
+        styled_df_tydzien,
+        column_order=(
+            'rank',
+            'name',
+            'pl',
+            'pl_rr',
+            'usa',
+            'usa_rr',
+            'world',
+            'world_rr',
+            'crypto',
+            'crypto_rr',
+            'commodity',
+            'commodity_rr',
+            'spolki_rr',
+            'return rate'
+            ),
+        column_config={
+            'rank': st.column_config.NumberColumn('Rank'),
+            'name': st.column_config.TextColumn('User'),
+            'pl_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+            'usa_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+            'world_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+            'crypto_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+            'commodity_rr': st.column_config.NumberColumn('%', format='%.1f %%'),
+            'pl': st.column_config.TextColumn('Polska'),
+            'usa': st.column_config.TextColumn('USA'),
+            'world': st.column_config.TextColumn('Świat'),
+            'crypto': st.column_config.TextColumn('Krypto'),
+            'commodity': st.column_config.TextColumn('Surowiec'),
+            'spolki_rr': st.column_config.NumberColumn('Zwrot (spółki)', format='%.1f %%'),
+            'return rate': st.column_config.NumberColumn('Stopa zwrotu', format='%.1f %%')
+        },
+        width='stretch',
+        hide_index=True,
+        )
+
+    wygraniec, frajer = st.columns(2)
+    with wygraniec:
+        st.markdown(f"<h3 style='text-align: center;'>KOKS TYGODNIA:<br>{df_tydzien['name'].iloc[0]}</h3>", unsafe_allow_html=True)
+
+        st.image("gifs/jasperkasiorka-dawid-jasper.gif", width='stretch')
+
+    with frajer:
+        st.markdown(f"<h3 style='text-align: center;'>FRAJER TYGODNIA:<br>{'🫵🏼🤣 ' + df_tydzien['name'].iloc[-1]}</h3>", unsafe_allow_html=True)
 
         st.image("gifs/dawid.gif", width='stretch')
